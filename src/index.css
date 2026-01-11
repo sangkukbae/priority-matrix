@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-trello-blue: #0079BF;
+  --color-trello-navy: #0C3953;
+  --color-trello-light: #F4F5F7;
+  --color-trello-success: #61BD4F;
+  --color-trello-warning: #F2D600;
+  --color-trello-danger: #EB5A46;
+  --color-trello-charcoal: #172B4D;
+  --color-trello-gray: #6B778C;
+  --color-trello-border: #DFE1E6;
+
+  --color-quadrant-do-bg: #FFE2E2;
+  --color-quadrant-do-text: #8B0000;
+  --color-quadrant-do-accent: #EB5A46;
+  --color-quadrant-plan-bg: #E6F4EA;
+  --color-quadrant-plan-text: #1E7E34;
+  --color-quadrant-plan-accent: #61BD4F;
+  --color-quadrant-delegate-bg: #E3F2FD;
+  --color-quadrant-delegate-text: #0D47A1;
+  --color-quadrant-delegate-accent: #0079BF;
+  --color-quadrant-delete-bg: #F5F5F5;
+  --color-quadrant-delete-text: #616161;
+  --color-quadrant-delete-accent: #9E9E9E;
+
+  --shadow-trello-card: 0 1px 0 rgba(9, 30, 66, 0.25);
+  --shadow-trello-card-hover: 0 4px 8px rgba(9, 30, 66, 0.25);
+  --shadow-trello-drag: 0 8px 16px rgba(9, 30, 66, 0.3);
+  --radius-trello: 8px;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 199 89% 48%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* TipTap Editor List Styles */
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror li {
+  margin: 0.25rem 0;
+}
+
+.ProseMirror li p {
+  margin: 0;
+}
+
+/* 중첩 리스트 스타일 */
+.ProseMirror ul ul {
+  list-style-type: circle;
+}
+
+.ProseMirror ul ul ul {
+  list-style-type: square;
+}
+
+/* 링크 스타일 (에디터 내부용) */
+.ProseMirror a {
+  color: #0079BF;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ProseMirror a:hover {
+  color: #026AA7;
+}
