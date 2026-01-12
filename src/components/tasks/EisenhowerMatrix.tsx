@@ -82,16 +82,16 @@ export function EisenhowerMatrix() {
 		if (!task) return;
 
 		const validQuadrants: QuadrantType[] = ['DO', 'PLAN', 'DELEGATE', 'DELETE'];
-		const isDroppingOnQuadrant = validQuadrants.includes(overId as QuadrantType);
+		const isDroppingOnQuadrant = validQuadrants.includes(
+			overId as QuadrantType
+		);
 
 		if (isDroppingOnQuadrant) {
 			const overQuadrantId = overId as QuadrantType;
 			if (task.quadrant !== overQuadrantId) {
 				moveTask(activeTaskId, overQuadrantId);
 				toast.success('작업 이동됨', {
-					description: `"${task.title}" → ${
-						quadrantConfig[overQuadrantId].title.split(' ')[0]
-					}`,
+					description: `"${task.title}" → ${quadrantConfig[overQuadrantId].title}`,
 				});
 			}
 		} else {
