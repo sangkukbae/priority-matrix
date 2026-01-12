@@ -43,6 +43,12 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { formatDate } from '@/lib/utils';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TaskFormDialogProps {
 	mode?: 'add' | 'edit';
@@ -51,6 +57,7 @@ interface TaskFormDialogProps {
 	onSuccess?: () => void;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
+	showTrigger?: boolean;
 }
 
 const PRIORITIES = [
@@ -74,6 +81,7 @@ export function TaskFormDialog({
 	onSuccess,
 	open: controlledOpen,
 	onOpenChange,
+	showTrigger = false,
 }: TaskFormDialogProps) {
 	const isControlled =
 		controlledOpen !== undefined && onOpenChange !== undefined;
@@ -98,7 +106,9 @@ export function TaskFormDialog({
 			description: initialData?.description || '',
 			quadrant: initialData?.quadrant || defaultQuadrant,
 			priority: initialData?.priority || 'medium',
-			dueDate: initialData?.dueDate,
+			dueDate:
+				initialData?.dueDate ??
+				(mode === 'add' ? new Date().toISOString() : undefined),
 			checklist: initialData?.checklist || [],
 		},
 	});
@@ -117,11 +127,13 @@ export function TaskFormDialog({
 				description: initialData?.description || '',
 				quadrant: initialData?.quadrant || defaultQuadrant,
 				priority: initialData?.priority || 'medium',
-				dueDate: initialData?.dueDate,
+				dueDate:
+					initialData?.dueDate ??
+					(mode === 'add' ? new Date().toISOString() : undefined),
 				checklist: initialData?.checklist || [],
 			});
 		}
-	}, [open, initialData, defaultQuadrant, form]);
+	}, [open, initialData, defaultQuadrant, form, mode]);
 
 	function onSubmit(values: TaskFormSchema) {
 		if (mode === 'edit' && initialData?.id) {
@@ -166,14 +178,23 @@ export function TaskFormDialog({
 
 	return (
 		<>
-			{mode === 'add' && !isControlled && (
-				<Button
-					className="bg-[#0079BF] hover:bg-[#026AA7] text-white rounded-trello font-medium"
-					onClick={() => setOpen(true)}
-				>
-					<Plus className="w-4 h-4 mr-2" />
-					작업 추가
-				</Button>
+			{mode === 'add' && (!isControlled || showTrigger) && (
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								className="bg-[#0079BF] hover:bg-[#026AA7] text-white rounded-sm font-medium"
+								onClick={() => setOpen(true)}
+							>
+								<Plus className="w-4 h-4 mr-2" />
+								작업 추가
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>
+							<p>작업 추가 <span className="opacity-70 ml-2">Ctrl + Shift + N</span></p>
+						</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
 			)}
 
 			<Dialog open={open} onOpenChange={setOpen}>

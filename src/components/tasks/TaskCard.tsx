@@ -4,6 +4,7 @@ import { Calendar, CheckCircle2, Circle, Flag } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Task } from '@/types/task'
 import { cn } from '@/lib/utils'
+import { SafeHtmlRenderer } from '@/components/ui/SafeHtmlRenderer'
 
 interface TaskCardProps {
   task: Task
@@ -180,9 +181,12 @@ export function TaskCard({
 
         {/* Description */}
         {task.description && (
-          <p className="text-xs text-[#6B778C] mb-3 line-clamp-2">
-            {task.description}
-          </p>
+          <div className="text-xs text-[#6B778C] mb-3 line-clamp-2">
+            <SafeHtmlRenderer
+              html={task.description}
+              className="safe-html-content-compact"
+            />
+          </div>
         )}
 
         {/* Footer: Priority and due date */}
