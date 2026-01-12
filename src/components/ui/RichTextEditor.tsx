@@ -15,7 +15,7 @@ import {
   Type,
   ChevronDown,
 } from "lucide-react"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import {
   Popover,
@@ -331,6 +331,12 @@ export function RichTextEditor({
       },
     },
   })
+
+  useEffect(() => {
+    if (editor && value !== editor.getHTML()) {
+      editor.commands.setContent(value, { emitUpdate: false })
+    }
+  }, [editor, value])
 
   return (
     <div

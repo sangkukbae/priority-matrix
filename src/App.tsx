@@ -1,8 +1,28 @@
+import { useState, useEffect } from 'react';
 import { TaskFormDialog } from '@/components/tasks/TaskFormDialog';
 import { EisenhowerMatrix } from '@/components/tasks/EisenhowerMatrix';
 import { Toaster } from '@/components/ui/toast';
 
 function App() {
+	const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const isShortcut =
+				(e.ctrlKey || e.metaKey) &&
+				e.shiftKey &&
+				(e.code === 'KeyN' || e.key.toLowerCase() === 'n');
+
+			if (isShortcut) {
+				e.preventDefault();
+				setIsDialogOpen(true);
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, []);
+
 	return (
 		<div
 			className="min-h-screen bg-fixed bg-center bg-no-repeat bg-cover"
@@ -37,7 +57,12 @@ function App() {
 						</div>
 
 						<div className="flex items-center gap-3">
-							<TaskFormDialog mode="add" />
+							<TaskFormDialog
+								mode="add"
+								open={isDialogOpen}
+								onOpenChange={setIsDialogOpen}
+								showTrigger={true}
+							/>
 						</div>
 					</div>
 				</header>
