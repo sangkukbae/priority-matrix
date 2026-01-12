@@ -49,6 +49,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 
 interface TaskFormDialogProps {
 	mode?: 'add' | 'edit';
@@ -191,7 +192,12 @@ export function TaskFormDialog({
 							</Button>
 						</TooltipTrigger>
 						<TooltipContent>
-							<p>작업 추가 <span className="opacity-70 ml-2">Ctrl + Shift + N</span></p>
+							<p>
+								작업 추가{' '}
+								<KbdGroup className="text-sm bg-gray-100 rounded-sm px-1 py-0.5">
+									<Kbd>Ctrl</Kbd> + <Kbd>Shift</Kbd> + <Kbd>N</Kbd>
+								</KbdGroup>
+							</p>
 						</TooltipContent>
 					</Tooltip>
 				</TooltipProvider>
