@@ -1,10 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Task, QuadrantType } from '@/types/task'
+import type { Task, QuadrantType, Label } from '@/types/task'
+import { DEFAULT_LABEL_COLORS } from '@/types/task'
 import { generateId } from '@/lib/utils'
 
 interface TaskState {
   tasks: Task[]
+  labels: Label[]
 
   addTask: (task: Omit<Task, 'id' | 'order' | 'createdAt' | 'updatedAt' | 'completed'>) => void
   updateTask: (id: string, updates: Partial<Task>) => void
@@ -14,15 +16,27 @@ interface TaskState {
   toggleComplete: (id: string) => void
   clearAllTasks: () => void
 
+  addLabel: (label: Omit<Label, 'id'>) => void
+  updateLabel: (id: string, updates: Partial<Label>) => void
+  deleteLabel: (id: string) => void
+  getLabelById: (id: string) => Label | undefined
+
   getTaskById: (id: string) => Task | undefined
   getTasksByQuadrant: (quadrant: QuadrantType) => Task[]
   getTaskStats: () => Record<QuadrantType, number>
 }
 
+const initialLabels: Label[] = DEFAULT_LABEL_COLORS.map((item, index) => ({
+  id: `label-${index + 1}`,
+  name: '',
+  color: item.color,
+}))
+
 export const useTaskStore = create<TaskState>()(
   persist(
     (set, get) => ({
       tasks: [],
+      labels: initialLabels,
       
       addTask: (taskData) => set((state) => {
         const quadrantTasks = state.tasks.filter(t => t.quadrant === taskData.quadrant)
@@ -106,7 +120,37 @@ export const useTaskStore = create<TaskState>()(
         ),
       })),
       
-      clearAllTasks: () => set({ tasks: [] }),
+      clearAllTasks: () => set({ tasks: [], labels: initialLabels }),
+
+      addLabel: (labelData) => set((state) => ({
+        labels: [
+          ...state.labels,
+          { ...labelData, id: generateId() },
+        ],
+      })),
+
+      updateLabel: (id, updates) => set((state) => ({
+        labels: state.labels.map((label) =>
+          label.id === id ? { ...label, ...updates } : label
+        ),
+        tasks: state.tasks.map((task) =>
+          task.labels?.includes(id)
+            ? { ...task, updatedAt: new Date().toISOString() }
+            : task
+        ),
+      })),
+
+      deleteLabel: (id) => set((state) => ({
+        labels: state.labels.filter((label) => label.id !== id),
+        tasks: state.tasks.map((task) => ({
+          ...task,
+          labels: task.labels?.filter((labelId) => labelId !== id),
+        })),
+      })),
+
+      getLabelById: (id) => {
+        return get().labels.find((label) => label.id === id)
+      },
 
       getTaskById: (id): Task | undefined => {
         return get().tasks.find((task) => task.id === id)
@@ -130,6 +174,58 @@ export const useTaskStore = create<TaskState>()(
     }),
     {
       name: 'priority-metrix-storage',
+      version: 1,
+      migrate: (persistedState: any, version) => {
+        if (!persistedState) {
+          return { tasks: [], labels: initialLabels }
+        }
+
+        if (!persistedState.labels) {
+          persistedState.labels = initialLabels
+        }
+
+        if (version < 1) {
+          const colorTagToColor: Record<string, string> = {
+            green: '#61BD4F',
+            yellow: '#F2D600',
+            blue: '#0079BF',
+            red: '#EB5A46',
+          }
+
+          const labelsByColor = new Map<string, string>()
+          const nextLabelId = () => `label-${labelsByColor.size + 1}`
+
+          persistedState.labels.forEach((label: Label) => {
+            labelsByColor.set(label.color, label.id)
+          })
+
+          const tasks = (persistedState.tasks || []).map((task: Task) => {
+            if (!task.colorTag) return task
+            const mappedColor = colorTagToColor[task.colorTag]
+            if (!mappedColor) return { ...task, labels: [] }
+
+            if (!labelsByColor.has(mappedColor)) {
+              const newId = nextLabelId()
+              persistedState.labels.push({ id: newId, name: '', color: mappedColor })
+              labelsByColor.set(mappedColor, newId)
+            }
+
+            const labelId = labelsByColor.get(mappedColor)
+            return {
+              ...task,
+              labels: labelId ? [labelId] : [],
+              colorTag: undefined,
+            }
+          })
+
+          return {
+            ...persistedState,
+            tasks,
+          }
+        }
+
+        return persistedState
+      },
     }
   )
 )

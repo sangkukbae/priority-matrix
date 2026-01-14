@@ -4,11 +4,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { toast } from 'sonner';
-import { Plus, Calendar, X, Check } from 'lucide-react';
+import { Plus, X, Check, ChevronDown } from 'lucide-react';
 import { useTaskStore } from '@/store/taskStore';
 import { taskFormSchema, type TaskFormSchema } from '@/lib/validations/task';
-import { cn } from '@/lib/utils';
-import { generateId } from '@/lib/utils';
+import {
+	cn,
+	generateId,
+	formatDateCompact,
+	getDueDateStatus,
+	getDueDateLabel,
+} from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +46,6 @@ import {
 	PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { formatDate } from '@/lib/utils';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import {
 	Tooltip,
@@ -50,6 +54,7 @@ import {
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
+import { LabelPicker } from '@/components/tasks/LabelPicker';
 
 interface TaskFormDialogProps {
 	mode?: 'add' | 'edit';
@@ -102,17 +107,19 @@ export function TaskFormDialog({
 
 	const form = useForm<TaskFormSchema>({
 		resolver: zodResolver(taskFormSchema),
-		defaultValues: {
-			title: initialData?.title || '',
-			description: initialData?.description || '',
-			quadrant: initialData?.quadrant || defaultQuadrant,
-			priority: initialData?.priority || 'medium',
-			dueDate:
-				initialData?.dueDate ??
-				(mode === 'add' ? new Date().toISOString() : undefined),
-			checklist: initialData?.checklist || [],
-		},
-	});
+	defaultValues: {
+		title: initialData?.title || '',
+		description: initialData?.description || '',
+		quadrant: initialData?.quadrant || defaultQuadrant,
+		priority: initialData?.priority || 'medium',
+		dueDate:
+			initialData?.dueDate ??
+			(mode === 'add' ? new Date().toISOString() : undefined),
+		checklist: initialData?.checklist || [],
+		labels: initialData?.labels || [],
+	},
+});
+
 
 	const { fields, append, remove } = useFieldArray({
 		control: form.control,
@@ -132,6 +139,7 @@ export function TaskFormDialog({
 					initialData?.dueDate ??
 					(mode === 'add' ? new Date().toISOString() : undefined),
 				checklist: initialData?.checklist || [],
+				labels: initialData?.labels || [],
 			});
 		}
 	}, [open, initialData, defaultQuadrant, form, mode]);
@@ -221,34 +229,52 @@ export function TaskFormDialog({
 							onSubmit={form.handleSubmit(onSubmit)}
 							className="p-6 space-y-4"
 						>
-							<FormField
-								control={form.control}
-								name="title"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel className="text-sm font-medium text-[#172B4D]">
-											작업 제목 *
-										</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="새 작업을 입력하세요..."
-												className={cn(
-													'trello-input',
-													'w-full px-3 py-2',
-													'bg-[#FAFBFC] border border-[#DFE1E6] rounded',
-													'text-sm text-[#172B4D] placeholder:text-[#9E9E9E]',
-													'focus:bg-white focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
-													'transition-all duration-200'
-												)}
-												{...field}
-											/>
-										</FormControl>
-										<FormMessage className="text-xs text-[#EB5A46]" />
-									</FormItem>
-								)}
-							/>
+						<FormField
+							control={form.control}
+							name="title"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel className="text-sm font-medium text-[#172B4D]">
+										작업 제목 *
+									</FormLabel>
+									<FormControl>
+										<Input
+											placeholder="새 작업을 입력하세요..."
+											className={cn(
+												'trello-input',
+												'w-full px-3 py-2',
+												'bg-[#FAFBFC] border border-[#DFE1E6] rounded',
+												'text-sm text-[#172B4D] placeholder:text-[#9E9E9E]',
+												'focus:bg-white focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
+												'transition-all duration-200'
+											)}
+											{...field}
+										/>
+									</FormControl>
+									<FormMessage className="text-xs text-[#EB5A46]" />
+								</FormItem>
+							)}
+						/>
 
-							<FormField
+						<FormField
+							control={form.control}
+							name="labels"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel className="text-sm font-medium text-[#172B4D]">
+										레이블
+									</FormLabel>
+									<LabelPicker
+										value={field.value || []}
+										onChange={field.onChange}
+									/>
+									<FormMessage className="text-xs text-[#EB5A46]" />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+
 								control={form.control}
 								name="description"
 								render={({ field }) => (
@@ -356,61 +382,92 @@ export function TaskFormDialog({
 								/>
 							</div>
 
-							<FormField
-								control={form.control}
-								name="dueDate"
-								render={({ field }) => (
+						<FormField
+							control={form.control}
+							name="dueDate"
+							render={({ field }) => {
+								const status = getDueDateStatus(field.value);
+								const statusLabel = getDueDateLabel(status);
+								const badgeStyles = {
+									overdue: 'bg-[#EB5A46] text-white',
+									today: 'bg-[#F2D600] text-[#172B4D]',
+									soon: 'bg-[#F2D600] text-[#172B4D]',
+									normal: '',
+									none: '',
+								};
+
+								return (
 									<FormItem className="flex flex-col">
-										<FormLabel className="text-sm font-medium text-[#172B4D]">
+										<FormLabel
+											htmlFor={undefined}
+											className="text-sm font-medium text-[#172B4D]"
+										>
 											마감일
 										</FormLabel>
-										<Popover>
-											<PopoverTrigger asChild>
-												<FormControl>
-													<button
-														type="button"
-														className={cn(
-															'trello-date-picker',
-															'w-full px-3 py-2 text-left',
-															'bg-[#FAFBFC] border border-[#DFE1E6] rounded',
-															'text-sm text-[#172B4D]',
-															'hover:bg-[#F4F5F7]',
-															'focus:bg-white focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
-															'transition-all duration-200',
-															!field.value && 'text-[#9E9E9E]'
-														)}
-													>
-														{field.value ? (
-															formatDate(field.value)
-														) : (
-															<span>마감일 선택</span>
-														)}
-														<Calendar className="w-4 h-4 ml-auto opacity-50" />
-													</button>
-												</FormControl>
-											</PopoverTrigger>
-											<PopoverContent
-												className="bg-white border border-[#DFE1E6] rounded-lg shadow-trello-card p-1"
-												align="start"
-											>
-												<CalendarComponent
-													mode="single"
-													selected={
-														field.value ? new Date(field.value) : undefined
-													}
-													onSelect={date => {
-														field.onChange(date?.toISOString());
-													}}
-													disabled={date => date < today}
-													weekStartsOn={1}
-													className="border-0"
-												/>
-											</PopoverContent>
-										</Popover>
+											<Popover>
+												<PopoverTrigger asChild>
+													<FormControl>
+														<button
+															type="button"
+															className={cn(
+																'inline-flex items-center gap-2',
+																'w-full px-3 py-2 text-left',
+																'bg-[#091E420F] hover:bg-[#091E4224]',
+																'border border-transparent rounded-trello',
+																'text-sm font-medium text-[#172B4D]',
+																'focus:bg-[#091E4224] focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
+																'transition-all duration-200',
+																!field.value && 'text-[#6B778C]'
+															)}
+														>
+															<span className="flex-1">
+																{field.value ? formatDateCompact(field.value) : '마감일 설정'}
+															</span>
+
+															{statusLabel && (
+																<span
+																	className={cn(
+																		'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+																		badgeStyles[status]
+																	)}
+																>
+																	{statusLabel}
+																</span>
+															)}
+
+															<ChevronDown className="w-4 h-4 opacity-60 flex-shrink-0" />
+														</button>
+													</FormControl>
+												</PopoverTrigger>
+												<PopoverContent
+													className="bg-white border border-[#DFE1E6] rounded-lg shadow-trello-card p-1"
+													align="start"
+												>
+													{(() => {
+														const selectedDate = field.value ? new Date(field.value) : today;
+														return (
+															<CalendarComponent
+																mode="single"
+																selected={selectedDate}
+																onSelect={date => {
+																	const next = date ?? selectedDate;
+																	field.onChange(next?.toISOString());
+																}}
+																disabled={date => date < today}
+																weekStartsOn={1}
+																className="border-0"
+															/>
+														);
+													})()}
+												</PopoverContent>
+											</Popover>
+
 										<FormMessage className="text-xs text-[#EB5A46]" />
 									</FormItem>
-								)}
-							/>
+								);
+							}}
+						/>
+
 
 							<div className="space-y-3">
 								<div className="flex items-center justify-between">
