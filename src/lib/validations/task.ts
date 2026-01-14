@@ -9,6 +9,12 @@ export const checklistItemSchema = z.object({
   completed: z.boolean(),
 })
 
+export const labelSchema = z.object({
+  id: z.string(),
+  name: z.string().max(50, '레이블 이름은 50자 이내로 입력해주세요'),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, '올바른 색상 코드를 입력해주세요'),
+})
+
 export const taskFormSchema = z.object({
   title: z
     .string()
@@ -33,6 +39,7 @@ export const taskFormSchema = z.object({
     ),
 
   checklist: z.array(checklistItemSchema).optional(),
+  labels: z.array(z.string()).optional(),
 })
 
 export type TaskFormSchema = z.infer<typeof taskFormSchema>

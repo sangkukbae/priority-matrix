@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import type { Task } from '@/types/task'
 import { cn } from '@/lib/utils'
 import { SafeHtmlRenderer } from '@/components/ui/SafeHtmlRenderer'
+import { useTaskStore } from '@/store/taskStore'
 
 interface TaskCardProps {
   task: Task
@@ -26,6 +27,8 @@ export function TaskCard({
   onDelete,
   onToggleComplete,
 }: TaskCardProps) {
+  const getLabelById = useTaskStore((state) => state.getLabelById)
+
   const {
     attributes,
     listeners,
@@ -42,6 +45,11 @@ export function TaskCard({
 
   const priority = priorityConfig[task.priority]
   const PriorityIcon = priority.icon
+
+  const labelColors = task.labels
+    ?.map((id) => getLabelById(id))
+    .filter(Boolean)
+    .map((label) => label!.color)
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -75,8 +83,19 @@ export function TaskCard({
       role="button"
       aria-label={`${task.title}${task.completed ? ' (완료됨)' : ''}`}
     >
-      {/* Color tag bar */}
-      {task.colorTag && (
+      {labelColors && labelColors.length > 0 && (
+        <div className="flex gap-1 px-3 pt-3 pb-1">
+          {labelColors.map((color, idx) => (
+            <div
+              key={`${color}-${idx}`}
+              className="h-2 flex-1 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      )}
+
+      {!labelColors?.length && task.colorTag && (
         <div
           className={cn(
             'absolute left-0 top-0 bottom-0 w-1 rounded-l-lg',
