@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import { TaskFormDialog } from '@/components/tasks/TaskFormDialog';
 import { EisenhowerMatrix } from '@/components/tasks/EisenhowerMatrix';
+import { HeaderMenu } from '@/components/HeaderMenu';
 import { Toaster } from '@/components/ui/toast';
+import { useSettingsStore } from '@/store/settingsStore';
 
 function App() {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	const backgroundImage = useSettingsStore((state) => state.backgroundImage);
+	const resetBackgroundImage = useSettingsStore((state) => state.resetBackgroundImage);
+	const [bgLoadError, setBgLoadError] = useState(false);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -23,12 +28,21 @@ function App() {
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	}, []);
 
+	useEffect(() => {
+		setBgLoadError(false);
+		const img = new Image();
+		img.onerror = () => {
+			setBgLoadError(true);
+			resetBackgroundImage();
+		};
+		img.src = backgroundImage;
+	}, [backgroundImage, resetBackgroundImage]);
+
 	return (
 		<div
 			className="min-h-screen bg-fixed bg-center bg-no-repeat bg-cover"
 			style={{
-				backgroundImage:
-					"url('/images/shutter-speed-3LXPDYb83MY-unsplash.jpg')",
+				backgroundImage: `url('${backgroundImage}')`,
 			}}
 		>
 			{/* Subtle overlay for better readability */}
@@ -56,16 +70,24 @@ function App() {
 							</div>
 						</div>
 
-						<div className="flex items-center gap-3">
-							<TaskFormDialog
-								mode="add"
-								open={isDialogOpen}
-								onOpenChange={setIsDialogOpen}
-								showTrigger={true}
-							/>
-						</div>
+					<div className="flex items-center gap-3">
+						<TaskFormDialog
+							mode="add"
+							open={isDialogOpen}
+							onOpenChange={setIsDialogOpen}
+							showTrigger={true}
+						/>
+						<HeaderMenu />
+					</div>
+
 					</div>
 				</header>
+
+				{bgLoadError && (
+					<span className="sr-only" aria-live="polite">
+						배경 이미지 로드 실패, 기본 배경으로 복원했습니다.
+					</span>
+				)}
 
 				{/* Main Content - Eisenhower Matrix */}
 				<main className="py-6 mx-auto max-w-7xl">

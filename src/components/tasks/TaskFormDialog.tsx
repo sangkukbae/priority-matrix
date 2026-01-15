@@ -58,7 +58,7 @@ import { LabelPicker } from '@/components/tasks/LabelPicker';
 
 interface TaskFormDialogProps {
 	mode?: 'add' | 'edit';
-	initialData?: Partial<TaskFormSchema> & { id?: string };
+	initialData?: Partial<TaskFormSchema> & { id?: string; completed?: boolean };
 	quadrant?: 'DO' | 'PLAN' | 'DELEGATE' | 'DELETE';
 	onSuccess?: () => void;
 	open?: boolean;
@@ -98,6 +98,8 @@ export function TaskFormDialog({
 
 	const addTask = useTaskStore(state => state.addTask);
 	const updateTask = useTaskStore(state => state.updateTask);
+
+	const isCompleted = initialData?.completed ?? false;
 
 	const today = useMemo(() => {
 		const d = new Date();
@@ -424,16 +426,27 @@ export function TaskFormDialog({
 																{field.value ? formatDateCompact(field.value) : '마감일 설정'}
 															</span>
 
-															{statusLabel && (
-																<span
-																	className={cn(
-																		'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-																		badgeStyles[status]
-																	)}
-																>
-																	{statusLabel}
-																</span>
-															)}
+							{statusLabel && status !== 'overdue' && (
+								<span
+									className={cn(
+										'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+										badgeStyles[status]
+									)}
+								>
+									{statusLabel}
+								</span>
+							)}
+							{statusLabel && status === 'overdue' && !isCompleted && (
+								<span
+									className={cn(
+										'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+										badgeStyles[status]
+									)}
+								>
+									{statusLabel}
+								</span>
+							)}
+
 
 															<ChevronDown className="w-4 h-4 opacity-60 flex-shrink-0" />
 														</button>
