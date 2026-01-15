@@ -23,7 +23,7 @@ export const taskFormSchema = z.object({
   
   description: z
     .string()
-    .max(500, '설명은 500자 이내로 입력해주세요')
+    .max(1000, '설명은 1000자 이내로 입력해주세요')
     .optional(),
   
   quadrant: z.enum(QUADRANT_ENUM),
