@@ -4,6 +4,7 @@ import { EisenhowerMatrix } from '@/components/tasks/EisenhowerMatrix';
 import { HeaderMenu } from '@/components/HeaderMenu';
 import { Toaster } from '@/components/ui/toast';
 import { useSettingsStore } from '@/store/settingsStore';
+import { ChatBot } from '@/components/chat';
 
 function App() {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -96,6 +97,7 @@ function App() {
 
 				{/* Toast Provider */}
 				<Toaster />
+				<ChatBot />
 			</div>
 		</div>
 	);
