@@ -173,6 +173,11 @@ export function TaskFormDialog({
 	};
 
 	const handleChecklistKeyDown = (e: React.KeyboardEvent, index: number) => {
+		// IME 조합 중일 때는 Enter 키를 무시 (macOS 한글 입력 중복 방지)
+		if (e.nativeEvent.isComposing) {
+			return;
+		}
+
 		if (e.key === 'Enter') {
 			e.preventDefault();
 			addChecklistItem();

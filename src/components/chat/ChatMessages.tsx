@@ -4,9 +4,10 @@ import { ChatMessage } from './ChatMessage'
 
 interface ChatMessagesProps {
   messages: ChatMessageType[]
+  isLoading?: boolean
 }
 
-export function ChatMessages({ messages }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -25,7 +26,13 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
       {messages.length === 0 ? (
         <p className="text-sm text-[#6B778C]">안녕하세요! 궁금한 내용을 물어보세요.</p>
       ) : (
-        messages.map((message) => <ChatMessage key={message.id} message={message} />)
+        messages.map((message, index) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            isLoading={isLoading && index === messages.length - 1}
+          />
+        ))
       )}
     </div>
   )

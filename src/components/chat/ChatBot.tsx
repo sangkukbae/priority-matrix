@@ -142,7 +142,7 @@ export function ChatBot() {
 
       <ChatPanel isOpen={isOpen}>
         <ChatHeader onClose={handleClose} availabilityStatus={availabilityStatus} error={error} />
-        <ChatMessages messages={messages} />
+        <ChatMessages messages={messages} isLoading={isLoading} />
         <ChatAvailability availabilityStatus={availabilityStatus} />
         <ChatInput
           ref={inputRef}
