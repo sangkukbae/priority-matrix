@@ -1,6 +1,6 @@
 import { streamText } from 'ai';
 import { builtInAI, doesBrowserSupportBuiltInAI } from '@built-in-ai/core';
-import type { StreamChatOptions } from '@/types/chat';
+import type { AIPromptMessage, StreamChatOptions } from '@/types/chat';
 
 type BuiltInAIModel = ReturnType<typeof builtInAI> & {
 	createSessionWithProgress?: (progress: (value: number) => void) => Promise<unknown>;
@@ -19,7 +19,7 @@ interface LanguageModelSession {
 interface LanguageModelAPI {
 	create: (options?: {
 		monitor?: (m: LanguageModelMonitor) => void;
-		initialPrompts?: { role: 'system' | 'user' | 'assistant'; content: string }[];
+		initialPrompts?: AIPromptMessage[];
 	}) => Promise<LanguageModelSession>;
 	availability?: () => Promise<LanguageModelAvailability>;
 }
@@ -51,6 +51,7 @@ async function streamWithLanguageModel(
 	onUpdate: (text: string) => void,
 	signal?: AbortSignal,
 	systemPrompt?: string,
+	conversationHistory?: AIPromptMessage[],
 ): Promise<string> {
 	const lm = (window as unknown as WindowWithLanguageModel).LanguageModel;
 	if (!lm?.create) {
@@ -83,8 +84,21 @@ async function streamWithLanguageModel(
 		},
 	};
 
+	const historyMessages = conversationHistory?.filter(
+		(message) => message.role !== 'system' && message.content.trim().length > 0,
+	);
+	const initialPrompts: AIPromptMessage[] = [];
+
 	if (systemPrompt) {
-		sessionOptions.initialPrompts = [{ role: 'system', content: systemPrompt }];
+		initialPrompts.push({ role: 'system', content: systemPrompt });
+	}
+
+	if (historyMessages?.length) {
+		initialPrompts.push(...historyMessages);
+	}
+
+	if (initialPrompts.length > 0) {
+		sessionOptions.initialPrompts = initialPrompts;
 	}
 
 	const sessionPromise = lm.create(sessionOptions);
@@ -181,11 +195,23 @@ export async function streamChatResponse(
 	options?: StreamChatOptions
 ): Promise<string> {
 	const resolvedSignal = options?.signal ?? signal;
+	const historyMessages = options?.conversationHistory?.filter(
+		(message) => message.role !== 'system' && message.content.trim().length > 0,
+	);
+	const historyAwareMessages = historyMessages?.length
+		? [...historyMessages, { role: 'user' as const, content: prompt }]
+		: undefined;
 
 	if (typeof window !== 'undefined' && (window as unknown as WindowWithLanguageModel).LanguageModel) {
 		try {
 			return await withTimeout(
-				streamWithLanguageModel(prompt, onUpdate, resolvedSignal, options?.systemPrompt),
+				streamWithLanguageModel(
+					prompt,
+					onUpdate,
+					resolvedSignal,
+					options?.systemPrompt,
+					historyMessages,
+				),
 				30000,
 				resolvedSignal,
 			);
@@ -198,7 +224,7 @@ export async function streamChatResponse(
 	const { textStream } = await streamText({
 		model,
 		system: options?.systemPrompt,
-		prompt,
+		...(historyAwareMessages ? { messages: historyAwareMessages } : { prompt }),
 		abortSignal: resolvedSignal,
 	});
 

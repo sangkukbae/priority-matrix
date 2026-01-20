@@ -8,7 +8,7 @@ import { ChatFAB } from './ChatFAB'
 import { useChatStore } from '@/store/chatStore'
 import { getChatAvailabilityStatus, streamChatResponse } from '@/lib/chat-ai'
 import { useTaskStore } from '@/store/taskStore'
-import { buildPromptWithContext } from '@/lib/chat-context'
+import { buildConversationHistory, buildPromptWithContext } from '@/lib/chat-context'
 
 export function ChatBot() {
   const {
@@ -96,6 +96,8 @@ export function ChatBot() {
     controllerRef.current?.abort()
     controllerRef.current = new AbortController()
 
+    const conversationHistory = buildConversationHistory(messages, 10)
+
     addMessage({ role: 'user', content: prompt })
     addMessage({ role: 'assistant', content: '' })
     setLoading(true)
@@ -114,7 +116,7 @@ export function ChatBot() {
         prompt,
         (text) => updateLastMessage(text),
         controllerRef.current.signal,
-        { systemPrompt }
+        { systemPrompt, conversationHistory }
       )
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
