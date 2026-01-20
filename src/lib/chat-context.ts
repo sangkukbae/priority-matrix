@@ -1,4 +1,4 @@
-import type { ChatContextOptions } from '@/types/chat'
+import type { AIPromptMessage, ChatContextOptions, ChatMessage } from '@/types/chat'
 import type { Label, QuadrantType, Task, TaskPriority } from '@/types/task'
 
 export const SYSTEM_PROMPT_KO = `당신은 Priority Metrix 작업 관리 앱의 AI 어시스턴트입니다.
@@ -51,6 +51,8 @@ const DEFAULT_OPTIONS: Required<ChatContextOptions> = {
   includeDescriptions: false,
   includeLabels: true,
 }
+
+const MAX_CHARS_FOR_HISTORY = 8000
 
 function normalizeOptions(options?: ChatContextOptions): Required<ChatContextOptions> {
   return { ...DEFAULT_OPTIONS, ...options }
@@ -210,4 +212,35 @@ export function buildPromptWithContext(
     systemPrompt: buildSystemPrompt(taskContext),
     userPrompt: userMessage,
   }
+}
+
+export function buildConversationHistory(
+  messages: ChatMessage[],
+  maxMessages: number = 10
+): AIPromptMessage[] {
+  const completedMessages = messages.filter(
+    (message) => message.content && message.content.trim().length > 0
+  )
+
+  let recentMessages = completedMessages.slice(-maxMessages)
+
+  while (recentMessages.length > 0 && recentMessages[0].role === 'assistant') {
+    recentMessages = recentMessages.slice(1)
+  }
+
+  if (recentMessages.length > 0 && recentMessages[recentMessages.length - 1].role === 'user') {
+    recentMessages = recentMessages.slice(0, -1)
+  }
+
+  let totalChars = recentMessages.reduce((sum, message) => sum + message.content.length, 0)
+
+  while (totalChars > MAX_CHARS_FOR_HISTORY && recentMessages.length > 2) {
+    recentMessages = recentMessages.slice(2)
+    totalChars = recentMessages.reduce((sum, message) => sum + message.content.length, 0)
+  }
+
+  return recentMessages.map((message) => ({
+    role: message.role,
+    content: message.content,
+  }))
 }

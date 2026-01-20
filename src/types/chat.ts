@@ -1,5 +1,12 @@
 export type ChatRole = 'user' | 'assistant'
 
+export type AIPromptRole = 'system' | 'user' | 'assistant'
+
+export interface AIPromptMessage {
+  role: AIPromptRole
+  content: string
+}
+
 export type ChatAvailabilityStatus = 
   | 'available'
   | 'downloading'
@@ -41,4 +48,6 @@ export interface ChatContextOptions {
 export interface StreamChatOptions {
   systemPrompt?: string
   signal?: AbortSignal
+  conversationHistory?: AIPromptMessage[]
+  maxHistoryMessages?: number
 }

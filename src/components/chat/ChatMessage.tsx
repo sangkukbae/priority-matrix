@@ -35,7 +35,7 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
     <div className={clsx('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={clsx(
-          'max-w-[90%] rounded-[12px] px-3.5 py-2.5 text-sm shadow-sm transition-all duration-200 border border-[var(--color-trello-border)]',
+          'max-w-[90%] rounded-[12px] px-3.5 py-2.5 text-sm shadow-sm transition-all duration-200 border border-[var(--color-trello-border)] break-words overflow-hidden',
           isUser
             ? 'bg-[#E3F2FD] text-[#0D47A1] self-end'
             : 'bg-[#F4F5F7] text-[#172B4D]'
