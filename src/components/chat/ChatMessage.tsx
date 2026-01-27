@@ -1,8 +1,7 @@
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
 import clsx from 'clsx'
-import { SafeHtmlRenderer } from '@/components/ui/SafeHtmlRenderer'
-import { renderStreamdownToHtml } from '@/lib/streamdown'
-import { Copy, Check } from 'lucide-react'
+import { Streamdown } from 'streamdown'
+import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 
 interface ChatMessageProps {
@@ -50,10 +49,9 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
             <span className="w-1.5 h-1.5 bg-[#6B778C] rounded-full animate-bounce" />
           </div>
         ) : (
-          <SafeHtmlRenderer
-            html={renderStreamdownToHtml(message.content)}
-            className="chat-markdown-content"
-          />
+          <Streamdown mode="streaming" isAnimating={isLoading} className="chat-markdown-content">
+            {message.content}
+          </Streamdown>
         )}
         <div className={clsx('mt-1 flex items-center', isUser ? 'justify-end' : 'justify-between gap-2')}>
           {!isUser && !showLoading && (

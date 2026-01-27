@@ -65,6 +65,21 @@ function renderLineBlocks(lines: string[]): string {
       return
     }
 
+    const headerMatch = line.match(/^(#{1,6})\s+(.+)/)
+    if (headerMatch) {
+      closeLists()
+      const level = headerMatch[1].length
+      output.push(`<h${level}>${headerMatch[2]}</h${level}>`)
+      return
+    }
+
+    const quoteMatch = line.match(/^>\s+(.+)/)
+    if (quoteMatch) {
+      closeLists()
+      output.push(`<blockquote>${quoteMatch[1]}</blockquote>`)
+      return
+    }
+
     closeLists()
     output.push(`<p>${line}</p>`)
   })
