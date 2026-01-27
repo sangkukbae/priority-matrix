@@ -8,9 +8,12 @@ interface TaskState {
   tasks: Task[]
   labels: Label[]
 
-  addTask: (task: Omit<Task, 'id' | 'order' | 'createdAt' | 'updatedAt' | 'completed'>) => void
+  addTask: (task: Omit<Task, 'id' | 'order' | 'createdAt' | 'updatedAt' | 'completed' | 'archived' | 'archivedAt'>) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => boolean
+  archiveTask: (id: string) => void
+  restoreTask: (id: string) => void
+  permanentlyDeleteTask: (id: string) => boolean
   moveTask: (id: string, quadrant: QuadrantType) => void
   reorderTasks: (quadrant: QuadrantType, activeId: string, overId: string) => void
   toggleComplete: (id: string) => void
@@ -23,6 +26,7 @@ interface TaskState {
 
   getTaskById: (id: string) => Task | undefined
   getTasksByQuadrant: (quadrant: QuadrantType) => Task[]
+  getArchivedTasks: () => Task[]
   getTaskStats: () => Record<QuadrantType, number>
 }
 
@@ -39,7 +43,9 @@ export const useTaskStore = create<TaskState>()(
       labels: initialLabels,
       
       addTask: (taskData) => set((state) => {
-        const quadrantTasks = state.tasks.filter(t => t.quadrant === taskData.quadrant)
+        const quadrantTasks = state.tasks.filter(
+          t => t.quadrant === taskData.quadrant && !t.archived
+        )
         const newOrder = quadrantTasks.length
         return {
           tasks: [
@@ -49,6 +55,8 @@ export const useTaskStore = create<TaskState>()(
               id: generateId(),
               order: newOrder,
               completed: false,
+              archived: false,
+              archivedAt: undefined,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             } as Task,
@@ -78,10 +86,56 @@ export const useTaskStore = create<TaskState>()(
 
         return true
       },
+
+      archiveTask: (id) => set((state) => ({
+        tasks: state.tasks.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                archived: true,
+                archivedAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              }
+            : task
+        ),
+      })),
+
+      restoreTask: (id) => set((state) => {
+        const task = state.tasks.find(t => t.id === id)
+        if (!task) return state
+
+        const quadrantTasks = state.tasks.filter(
+          t => t.quadrant === task.quadrant && !t.archived
+        )
+        const newOrder = quadrantTasks.length
+
+        return {
+          tasks: state.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  archived: false,
+                  archivedAt: undefined,
+                  order: newOrder,
+                  updatedAt: new Date().toISOString(),
+                }
+              : t
+          ),
+        }
+      }),
+
+      permanentlyDeleteTask: (id) => {
+        const taskExists = get().tasks.some((task) => task.id === id)
+        if (!taskExists) return false
+        set((state) => ({
+          tasks: state.tasks.filter((task) => task.id !== id),
+        }))
+        return true
+      },
       
       moveTask: (id, quadrant) => set((state) => ({
         tasks: state.tasks.map((task) =>
-          task.id === id
+          task.id === id && !task.archived
             ? { ...task, quadrant, updatedAt: new Date().toISOString() }
             : task
         ),
@@ -89,7 +143,7 @@ export const useTaskStore = create<TaskState>()(
 
       reorderTasks: (quadrant, activeId, overId) => set((state) => {
         const quadrantTasks = state.tasks
-          .filter(t => t.quadrant === quadrant)
+          .filter(t => t.quadrant === quadrant && !t.archived)
           .sort((a, b) => a.order - b.order)
 
         const activeIndex = quadrantTasks.findIndex(t => t.id === activeId)
@@ -158,12 +212,22 @@ export const useTaskStore = create<TaskState>()(
 
       getTasksByQuadrant: (quadrant) => {
         return get().tasks
-          .filter((task) => task.quadrant === quadrant)
+          .filter((task) => task.quadrant === quadrant && !task.archived)
           .sort((a, b) => a.order - b.order)
+      },
+
+      getArchivedTasks: () => {
+        return get().tasks
+          .filter((task) => task.archived)
+          .sort((a, b) => {
+            const dateA = a.archivedAt ? new Date(a.archivedAt).getTime() : 0
+            const dateB = b.archivedAt ? new Date(b.archivedAt).getTime() : 0
+            return dateB - dateA
+          })
       },
       
       getTaskStats: () => {
-        const tasks = get().tasks
+        const tasks = get().tasks.filter(t => !t.archived)
         return {
           DO: tasks.filter((t) => t.quadrant === 'DO').length,
           PLAN: tasks.filter((t) => t.quadrant === 'PLAN').length,
@@ -174,14 +238,16 @@ export const useTaskStore = create<TaskState>()(
     }),
     {
       name: 'priority-metrix-storage',
-      version: 1,
+      version: 2,
       migrate: (persistedState: any, version) => {
         if (!persistedState) {
           return { tasks: [], labels: initialLabels }
         }
 
-        if (!persistedState.labels) {
-          persistedState.labels = initialLabels
+        let nextState = { ...persistedState }
+
+        if (!nextState.labels) {
+          nextState.labels = initialLabels
         }
 
         if (version < 1) {
@@ -195,18 +261,18 @@ export const useTaskStore = create<TaskState>()(
           const labelsByColor = new Map<string, string>()
           const nextLabelId = () => `label-${labelsByColor.size + 1}`
 
-          persistedState.labels.forEach((label: Label) => {
+          nextState.labels.forEach((label: Label) => {
             labelsByColor.set(label.color, label.id)
           })
 
-          const tasks = (persistedState.tasks || []).map((task: Task) => {
+          const tasks = (nextState.tasks || []).map((task: Task) => {
             if (!task.colorTag) return task
             const mappedColor = colorTagToColor[task.colorTag]
             if (!mappedColor) return { ...task, labels: [] }
 
             if (!labelsByColor.has(mappedColor)) {
               const newId = nextLabelId()
-              persistedState.labels.push({ id: newId, name: '', color: mappedColor })
+              nextState.labels.push({ id: newId, name: '', color: mappedColor })
               labelsByColor.set(mappedColor, newId)
             }
 
@@ -218,13 +284,21 @@ export const useTaskStore = create<TaskState>()(
             }
           })
 
-          return {
-            ...persistedState,
+          nextState = {
+            ...nextState,
             tasks,
           }
         }
 
-        return persistedState
+        if (version < 2) {
+          nextState.tasks = (nextState.tasks || []).map((task: Task) => ({
+            ...task,
+            archived: task.archived ?? false,
+            archivedAt: task.archivedAt,
+          }))
+        }
+
+        return nextState
       },
     }
   )
