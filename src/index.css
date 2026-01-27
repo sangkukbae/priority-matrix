@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../node_modules/streamdown/dist/*.js";
 
 @theme {
   --color-trello-blue: #0079BF;
@@ -99,6 +100,11 @@
   
   & p { margin: 0; }
   & p + p { margin-top: 0.25rem; }
+  & h1 { font-size: 1.5em; font-weight: 700; margin: 0.5rem 0; }
+  & h2 { font-size: 1.25em; font-weight: 600; margin: 0.4rem 0; }
+  & h3 { font-size: 1.125em; font-weight: 600; margin: 0.3rem 0; }
+  & h4, & h5, & h6 { font-size: 1em; font-weight: 600; margin: 0.2rem 0; }
+  & blockquote { border-left: 3px solid #dfe1e6; padding-left: 0.75rem; color: #5e6c84; margin: 0.5rem 0; font-style: italic; }
   & ul { list-style-type: disc; padding-left: 1rem; margin: 0.25rem 0; }
   & ol { list-style-type: decimal; padding-left: 1rem; margin: 0.25rem 0; }
   & li { margin: 0; }
@@ -130,4 +136,5 @@
 .chat-markdown-content {
   & p { line-height: 1.5; }
   & ul, & ol { margin: 0.25rem 0; }
+  & pre { background-color: #f4f5f7; padding: 0.5rem 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.35rem 0; }
 }

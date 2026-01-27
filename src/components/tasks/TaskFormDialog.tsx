@@ -4,7 +4,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { toast } from 'sonner';
-import { Plus, X, Check, ChevronDown } from 'lucide-react';
+import {
+	Plus,
+	X,
+	Check,
+	ChevronDown,
+	MoreHorizontal,
+	Archive,
+} from 'lucide-react';
 import { useTaskStore } from '@/store/taskStore';
 import { taskFormSchema, type TaskFormSchema } from '@/lib/validations/task';
 import {
@@ -24,6 +31,12 @@ import {
 	DialogDescription,
 	DialogFooter,
 } from '@/components/ui/dialog';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
 	Form,
 	FormControl,
@@ -98,6 +111,7 @@ export function TaskFormDialog({
 
 	const addTask = useTaskStore(state => state.addTask);
 	const updateTask = useTaskStore(state => state.updateTask);
+	const archiveTask = useTaskStore(state => state.archiveTask);
 
 	const isCompleted = initialData?.completed ?? false;
 
@@ -109,19 +123,18 @@ export function TaskFormDialog({
 
 	const form = useForm<TaskFormSchema>({
 		resolver: zodResolver(taskFormSchema),
-	defaultValues: {
-		title: initialData?.title || '',
-		description: initialData?.description || '',
-		quadrant: initialData?.quadrant || defaultQuadrant,
-		priority: initialData?.priority || 'medium',
-		dueDate:
-			initialData?.dueDate ??
-			(mode === 'add' ? new Date().toISOString() : undefined),
-		checklist: initialData?.checklist || [],
-		labels: initialData?.labels || [],
-	},
-});
-
+		defaultValues: {
+			title: initialData?.title || '',
+			description: initialData?.description || '',
+			quadrant: initialData?.quadrant || defaultQuadrant,
+			priority: initialData?.priority || 'medium',
+			dueDate:
+				initialData?.dueDate ??
+				(mode === 'add' ? new Date().toISOString() : undefined),
+			checklist: initialData?.checklist || [],
+			labels: initialData?.labels || [],
+		},
+	});
 
 	const { fields, append, remove } = useFieldArray({
 		control: form.control,
@@ -163,6 +176,15 @@ export function TaskFormDialog({
 		form.reset();
 		onSuccess?.();
 	}
+
+	const handleArchive = () => {
+		if (!initialData?.id) return;
+		archiveTask(initialData.id);
+		toast.success('작업이 아카이브되었습니다', {
+			description: `"${form.getValues('title')}" 작업이 아카이브에 보관되었습니다.`,
+		});
+		setOpen(false);
+	};
 
 	const addChecklistItem = () => {
 		append({
@@ -221,14 +243,44 @@ export function TaskFormDialog({
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent className="sm:max-w-[500px] p-0 bg-white rounded-trello shadow-trello-card max-h-[90vh] overflow-y-auto">
 					<DialogHeader className="px-6 pt-6 pb-4 border-b border-[#DFE1E6] sticky top-0 bg-white z-10">
-						<DialogTitle className="text-lg font-semibold text-[#172B4D]">
-							{mode === 'add' ? '새 작업 추가' : '작업 수정'}
-						</DialogTitle>
-						<DialogDescription className="text-sm text-[#6B778C] mt-1">
-							{mode === 'add'
-								? '새 작업을 추가하고 아이젠하워 매트릭스에 배치하세요.'
-								: '작업 정보를 수정하세요.'}
-						</DialogDescription>
+						<div className="flex items-start justify-between gap-4">
+							<div>
+								<DialogTitle className="text-lg font-semibold text-[#172B4D]">
+									{mode === 'add' ? '새 작업 추가' : '작업 수정'}
+								</DialogTitle>
+								<DialogDescription className="text-sm text-[#6B778C] mt-1">
+									{mode === 'add'
+										? '새 작업을 추가하고 아이젠하워 매트릭스에 배치하세요.'
+										: '작업 정보를 수정하세요.'}
+								</DialogDescription>
+							</div>
+
+							{mode === 'edit' && initialData?.id && (
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 rounded-sm text-[#6B778C] hover:bg-[#F4F5F7]"
+										>
+											<MoreHorizontal className="w-4 h-4" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end" className="w-48">
+										<DropdownMenuItem
+											onSelect={event => {
+												event.preventDefault();
+												handleArchive();
+											}}
+											className="cursor-pointer text-sm"
+										>
+											<Archive className="w-4 h-4 mr-2" />
+											아카이브 하기
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							)}
+						</div>
 					</DialogHeader>
 
 					<Form {...form}>
@@ -236,52 +288,51 @@ export function TaskFormDialog({
 							onSubmit={form.handleSubmit(onSubmit)}
 							className="p-6 space-y-4"
 						>
-						<FormField
-							control={form.control}
-							name="title"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel className="text-sm font-medium text-[#172B4D]">
-										작업 제목 *
-									</FormLabel>
-									<FormControl>
-										<Input
-											placeholder="새 작업을 입력하세요..."
-											className={cn(
-												'trello-input',
-												'w-full px-3 py-2',
-												'bg-[#FAFBFC] border border-[#DFE1E6] rounded',
-												'text-sm text-[#172B4D] placeholder:text-[#9E9E9E]',
-												'focus:bg-white focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
-												'transition-all duration-200'
-											)}
-											{...field}
+							<FormField
+								control={form.control}
+								name="title"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel className="text-sm font-medium text-[#172B4D]">
+											작업 제목 *
+										</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="새 작업을 입력하세요..."
+												className={cn(
+													'trello-input',
+													'w-full px-3 py-2',
+													'bg-[#FAFBFC] border border-[#DFE1E6] rounded',
+													'text-sm text-[#172B4D] placeholder:text-[#9E9E9E]',
+													'focus:bg-white focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
+													'transition-all duration-200',
+												)}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage className="text-xs text-[#EB5A46]" />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="labels"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel className="text-sm font-medium text-[#172B4D]">
+											레이블
+										</FormLabel>
+										<LabelPicker
+											value={field.value || []}
+											onChange={field.onChange}
 										/>
-									</FormControl>
-									<FormMessage className="text-xs text-[#EB5A46]" />
-								</FormItem>
-							)}
-						/>
+										<FormMessage className="text-xs text-[#EB5A46]" />
+									</FormItem>
+								)}
+							/>
 
-						<FormField
-							control={form.control}
-							name="labels"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel className="text-sm font-medium text-[#172B4D]">
-										레이블
-									</FormLabel>
-									<LabelPicker
-										value={field.value || []}
-										onChange={field.onChange}
-									/>
-									<FormMessage className="text-xs text-[#EB5A46]" />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-
+							<FormField
 								control={form.control}
 								name="description"
 								render={({ field }) => (
@@ -322,7 +373,7 @@ export function TaskFormDialog({
 															'bg-[#FAFBFC] border border-[#DFE1E6] rounded',
 															'text-sm text-[#172B4D]',
 															'focus:bg-white focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
-															'transition-all duration-200'
+															'transition-all duration-200',
 														)}
 													>
 														<SelectValue placeholder="사분면 선택" />
@@ -365,7 +416,7 @@ export function TaskFormDialog({
 															'bg-[#FAFBFC] border border-[#DFE1E6] rounded',
 															'text-sm text-[#172B4D]',
 															'focus:bg-white focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
-															'transition-all duration-200'
+															'transition-all duration-200',
 														)}
 													>
 														<SelectValue placeholder="우선순위 선택" />
@@ -389,28 +440,28 @@ export function TaskFormDialog({
 								/>
 							</div>
 
-						<FormField
-							control={form.control}
-							name="dueDate"
-							render={({ field }) => {
-								const status = getDueDateStatus(field.value);
-								const statusLabel = getDueDateLabel(status);
-								const badgeStyles = {
-									overdue: 'bg-[#EB5A46] text-white',
-									today: 'bg-[#F2D600] text-[#172B4D]',
-									soon: 'bg-[#F2D600] text-[#172B4D]',
-									normal: '',
-									none: '',
-								};
+							<FormField
+								control={form.control}
+								name="dueDate"
+								render={({ field }) => {
+									const status = getDueDateStatus(field.value);
+									const statusLabel = getDueDateLabel(status);
+									const badgeStyles = {
+										overdue: 'bg-[#EB5A46] text-white',
+										today: 'bg-[#F2D600] text-[#172B4D]',
+										soon: 'bg-[#F2D600] text-[#172B4D]',
+										normal: '',
+										none: '',
+									};
 
-								return (
-									<FormItem className="flex flex-col">
-										<FormLabel
-											htmlFor={undefined}
-											className="text-sm font-medium text-[#172B4D]"
-										>
-											마감일
-										</FormLabel>
+									return (
+										<FormItem className="flex flex-col">
+											<FormLabel
+												htmlFor={undefined}
+												className="text-sm font-medium text-[#172B4D]"
+											>
+												마감일
+											</FormLabel>
 											<Popover>
 												<PopoverTrigger asChild>
 													<FormControl>
@@ -424,34 +475,37 @@ export function TaskFormDialog({
 																'text-sm font-medium text-[#172B4D]',
 																'focus:bg-[#091E4224] focus:border-[#0079BF] focus:ring-2 focus:ring-[#0079BF]/20 focus:outline-none',
 																'transition-all duration-200',
-																!field.value && 'text-[#6B778C]'
+																!field.value && 'text-[#6B778C]',
 															)}
 														>
 															<span className="flex-1">
-																{field.value ? formatDateCompact(field.value) : '마감일 설정'}
+																{field.value
+																	? formatDateCompact(field.value)
+																	: '마감일 설정'}
 															</span>
 
-							{statusLabel && status !== 'overdue' && (
-								<span
-									className={cn(
-										'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-										badgeStyles[status]
-									)}
-								>
-									{statusLabel}
-								</span>
-							)}
-							{statusLabel && status === 'overdue' && !isCompleted && (
-								<span
-									className={cn(
-										'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-										badgeStyles[status]
-									)}
-								>
-									{statusLabel}
-								</span>
-							)}
-
+															{statusLabel && status !== 'overdue' && (
+																<span
+																	className={cn(
+																		'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+																		badgeStyles[status],
+																	)}
+																>
+																	{statusLabel}
+																</span>
+															)}
+															{statusLabel &&
+																status === 'overdue' &&
+																!isCompleted && (
+																	<span
+																		className={cn(
+																			'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+																			badgeStyles[status],
+																		)}
+																	>
+																		{statusLabel}
+																	</span>
+																)}
 
 															<ChevronDown className="w-4 h-4 opacity-60 flex-shrink-0" />
 														</button>
@@ -462,7 +516,9 @@ export function TaskFormDialog({
 													align="start"
 												>
 													{(() => {
-														const selectedDate = field.value ? new Date(field.value) : today;
+														const selectedDate = field.value
+															? new Date(field.value)
+															: today;
 														return (
 															<CalendarComponent
 																mode="single"
@@ -480,12 +536,11 @@ export function TaskFormDialog({
 												</PopoverContent>
 											</Popover>
 
-										<FormMessage className="text-xs text-[#EB5A46]" />
-									</FormItem>
-								);
-							}}
-						/>
-
+											<FormMessage className="text-xs text-[#EB5A46]" />
+										</FormItem>
+									);
+								}}
+							/>
 
 							<div className="space-y-3">
 								<div className="flex items-center justify-between">
@@ -515,7 +570,7 @@ export function TaskFormDialog({
 												'transition-all duration-200',
 												'focus-within:border-[#0079BF] focus-within:ring-2 focus-within:ring-[#0079BF]/20',
 												watchedChecklist?.[index]?.completed &&
-													'bg-[#F4F5F7] opacity-75'
+													'bg-[#F4F5F7] opacity-75',
 											)}
 										>
 											<button
@@ -525,14 +580,14 @@ export function TaskFormDialog({
 													'transition-all duration-200 cursor-pointer',
 													watchedChecklist?.[index]?.completed
 														? 'bg-[#61BD4F] border-[#61BD4F] text-white'
-														: 'border-[#DFE1E6] hover:border-[#0079BF] hover:bg-[#F4F5F7]'
+														: 'border-[#DFE1E6] hover:border-[#0079BF] hover:bg-[#F4F5F7]',
 												)}
 												onClick={() => {
 													const current =
 														watchedChecklist?.[index]?.completed ?? false;
 													form.setValue(
 														`checklist.${index}.completed`,
-														!current
+														!current,
 													);
 												}}
 											>
@@ -549,7 +604,7 @@ export function TaskFormDialog({
 													'text-sm text-[#172B4D] placeholder:text-[#9E9E9E]',
 													'focus:outline-none focus:ring-0 p-0',
 													watchedChecklist?.[index]?.completed &&
-														'line-through text-[#6B778C]'
+														'line-through text-[#6B778C]',
 												)}
 												onKeyDown={e => handleChecklistKeyDown(e, index)}
 											/>
@@ -569,7 +624,7 @@ export function TaskFormDialog({
 											className={cn(
 												'flex items-center justify-center py-4',
 												'border-2 border-dashed border-[#DFE1E6] rounded',
-												'text-sm text-[#6B778C]'
+												'text-sm text-[#6B778C]',
 											)}
 										>
 											체크리스트 항목이 없습니다. 위 버튼을 눌러 추가하세요.
