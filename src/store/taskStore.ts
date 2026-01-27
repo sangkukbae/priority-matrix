@@ -30,6 +30,11 @@ interface TaskState {
   getTaskStats: () => Record<QuadrantType, number>
 }
 
+type PersistedTaskState = {
+  tasks?: Task[]
+  labels?: Label[]
+} & Record<string, unknown>
+
 const initialLabels: Label[] = DEFAULT_LABEL_COLORS.map((item, index) => ({
   id: `label-${index + 1}`,
   name: '',
@@ -239,7 +244,7 @@ export const useTaskStore = create<TaskState>()(
     {
       name: 'priority-metrix-storage',
       version: 2,
-      migrate: (persistedState: any, version) => {
+      migrate: (persistedState: PersistedTaskState | undefined, version) => {
         if (!persistedState) {
           return { tasks: [], labels: initialLabels }
         }
