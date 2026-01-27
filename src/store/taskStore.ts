@@ -35,6 +35,9 @@ type PersistedTaskState = {
   labels?: Label[]
 } & Record<string, unknown>
 
+const isPersistedTaskState = (value: unknown): value is PersistedTaskState =>
+  typeof value === 'object' && value !== null
+
 const initialLabels: Label[] = DEFAULT_LABEL_COLORS.map((item, index) => ({
   id: `label-${index + 1}`,
   name: '',
@@ -244,16 +247,15 @@ export const useTaskStore = create<TaskState>()(
     {
       name: 'priority-metrix-storage',
       version: 2,
-      migrate: (persistedState: PersistedTaskState | undefined, version) => {
-        if (!persistedState) {
+      migrate: (persistedState, version) => {
+        if (!isPersistedTaskState(persistedState)) {
           return { tasks: [], labels: initialLabels }
         }
 
-        let nextState = { ...persistedState }
+        let nextState: PersistedTaskState = { ...persistedState }
 
-        if (!nextState.labels) {
-          nextState.labels = initialLabels
-        }
+        const labels = nextState.labels ? [...nextState.labels] : [...initialLabels]
+        nextState.labels = labels
 
         if (version < 1) {
           const colorTagToColor: Record<string, string> = {
@@ -266,7 +268,7 @@ export const useTaskStore = create<TaskState>()(
           const labelsByColor = new Map<string, string>()
           const nextLabelId = () => `label-${labelsByColor.size + 1}`
 
-          nextState.labels.forEach((label: Label) => {
+          labels.forEach((label: Label) => {
             labelsByColor.set(label.color, label.id)
           })
 
@@ -277,7 +279,7 @@ export const useTaskStore = create<TaskState>()(
 
             if (!labelsByColor.has(mappedColor)) {
               const newId = nextLabelId()
-              nextState.labels.push({ id: newId, name: '', color: mappedColor })
+              labels.push({ id: newId, name: '', color: mappedColor })
               labelsByColor.set(mappedColor, newId)
             }
 
